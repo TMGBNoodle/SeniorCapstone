@@ -4,7 +4,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LearningMeshes : MonoBehaviour
+public class DrawCreature : MonoBehaviour
 {
     [SerializeField] Vector3[] newVertices;
     [SerializeField] Vector2[] newUV;
@@ -13,7 +13,7 @@ public class LearningMeshes : MonoBehaviour
     void Start()
     {
         // Create a new Mesh and set its data properties (vertices, UV coordinates, and triangles).
-        Mesh mesh = circle(28, 5);
+        Mesh mesh = circle(3, 5);
 
         // After updating the Mesh data, recalculate the normals. 
         // If the Mesh uses shaders with normal maps, also call RecalculateTangents for proper lighting.
