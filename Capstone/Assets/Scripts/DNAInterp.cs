@@ -71,7 +71,7 @@ public class DNAInterp : MonoBehaviour
                     print("Creating limb");
                     return interpLimb(vals, pointer + 1);
                 default:
-                    return (pointer, new Part(partType.Null));
+                    return interpPart(vals, pointer + 1);
             }
         }
         else
@@ -111,12 +111,15 @@ public class DNAInterp : MonoBehaviour
             int anchorsActual = minAnchors + (int)(maxAnchors * ((float)anchorsRaw.Item1 / (float)anchorsRaw.Item2));
             pointer = incrPointer(pointer, 2, vals.Length);
             (int, int) anchorsUtRaw = interpNum(vals[pointer..(pointer + 1)]);
+            print("Actual anchors: " + anchorsActual);
+            print("Anchors used raw: " + anchorsUtRaw);
             int usedActual = (int)(anchorsActual * ((float)anchorsUtRaw.Item1 / (float)anchorsUtRaw.Item2));
             pointer = incrPointer(pointer, 2, vals.Length);
             //float sizeActual = 1;
             Part final = new Part(partType.Hub, sizeActual, anchorsActual);
             Dictionary<char[], int> lookup = new Dictionary<char[], int>();
             print(pointer);
+            print("using " + usedActual + " spaces");
             if (pointer == -1 || findEnd())
             {
                 print("Exit halfway");
@@ -137,7 +140,7 @@ public class DNAInterp : MonoBehaviour
                     final.connections[idAct] = new Connection(idAct, otherPart);
                 }
             }
-            print("Next Part");
+            print("Part ended");
             print(pointer);
             return (pointer, final);
         } else
