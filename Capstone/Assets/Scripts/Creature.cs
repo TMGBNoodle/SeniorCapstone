@@ -46,7 +46,7 @@ public class Part
         {
             case partType.Hub:
                 this.type = type;
-                this.connections = new Connection[4]{new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb))};
+                this.connections = new Connection[4]{new Connection(0, new Part(partType.Null)),new Connection(0, new Part(partType.Null)),new Connection(0, new Part(partType.Null)),new Connection(0, new Part(partType.Null))};
                 this.size = 5;
                 break;
             case partType.Limb:

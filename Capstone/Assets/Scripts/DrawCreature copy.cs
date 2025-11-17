@@ -206,7 +206,7 @@ public class DrawCreature : MonoBehaviour
         uv[0] = new Vector2(0, 0);
         float step = (2 * Mathf.PI) / verticeCount;
         int triInd = 0;
-        List<Mesh> meshes = new List<Mesh>();
+
         for (int i = 1; i < verticeCount + 1; i++)
         { //sin(theta) = opp/hyp cos(theta) = adj/hyp. size = hyp, opp = y, adj = x,
             int stepC = i - 1;
@@ -215,6 +215,40 @@ public class DrawCreature : MonoBehaviour
             float yAngle = Mathf.Cos((stepC * step)); // height of the y
             float posX = center.x + size * xAngle; // center + (normalized height * size)
             float posY = center.y + size * yAngle;
+
+            vertices[i] = new Vector3(posX, posY);
+            uv[i] = new Vector2(0, 0);
+            //Triangles will be 3 times as long as vertices, so must assign 3 points in each iteration
+            // An example triangles array for a circle of 4 vertices would be |0,1,2|,|0,2,3|,|0,3,4|,|0,5,6| (| | deliniates between a triangle, purely aesthetic)
+            //for i = 1, append 0 1 and 2
+            // for i =  2, append 0 2 and 3
+            triangles[triInd] = 0;
+            triInd += 1;
+            triangles[triInd] = i;
+            triInd += 1;
+            if (i + 1 > verticeCount)
+            {
+                triangles[triInd] = 1;
+                triInd += 1;
+            }
+            else
+            {
+                triangles[triInd] = i + 1;
+                triInd += 1;
+            }
+        }
+        Mesh mesh = new Mesh
+        {
+            vertices = vertices,
+            uv = uv,
+            triangles = triangles
+        };
+        GameObject thisObject = new GameObject();
+        Rigidbody2D rb = thisObject.GetOrAddComponent<Rigidbody2D>();
+        PolygonCollider2D collider = thisObject.GetOrAddComponent<PolygonCollider2D>();
+        collider.SetPath(1, fromV3(vertices));
+        MeshFilter meshFilter = thisObject.GetOrAddComponent<MeshFilter>();
+        meshFilter.mesh = mesh;
             if (verticeinfo[stepC] != null)
             {
                 print("Other connected");
@@ -238,44 +272,6 @@ public class DrawCreature : MonoBehaviour
                 }
                 meshes.Add(oMesh);
             }
-            vertices[i] = new Vector3(posX, posY);
-            uv[i] = new Vector2(0, 0);
-            //Triangles will be 3 times as long as vertices, so must assign 3 points in each iteration
-            // An example triangles array for a circle of 4 vertices would be |0,1,2|,|0,2,3|,|0,3,4|,|0,5,6| (| | deliniates between a triangle, purely aesthetic)
-            //for i = 1, append 0 1 and 2
-            // for i =  2, append 0 2 and 3
-            triangles[triInd] = 0;
-            triInd += 1;
-            triangles[triInd] = i;
-            triInd += 1;
-            if (i + 1 > verticeCount)
-            {
-                triangles[triInd] = 1;
-                triInd += 1;
-            }
-            else
-            {
-                triangles[triInd] = i + 1;
-                triInd += 1;
-            }
-        }
-        Mesh aMesh = new Mesh
-        {
-            vertices = vertices,
-            uv = uv,
-            triangles = triangles
-        };
-        print("Creating a hub");
-        print((string.Join(", ", aMesh.triangles.ToList())));
-        print((string.Join(", ", aMesh.vertices.ToList())));
-        meshes.Add(aMesh);
-        Mesh final = new Mesh();
-        print(meshes.Count);
-        foreach (Mesh mesh1 in meshes)
-        {
-            print(mesh1.vertices);
-            final = combineMeshes(final, mesh1);
-        }
         return final;
     }
     Mesh circle(int verticeCount, float size, Vector3 center)
