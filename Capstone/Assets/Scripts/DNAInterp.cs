@@ -17,6 +17,9 @@ public class DNAInterp : MonoBehaviour
     public int minAnchors = 1;
     public int maxAnchors = 20;
 
+    public Toggle append;
+
+    public Toggle prepend;
     public bool wrapPointer = false;
 
     public string[] stopCodons;
@@ -53,6 +56,8 @@ public class DNAInterp : MonoBehaviour
 
     public void mutate()
     {
+        bool doPrepend = true;
+        bool doAppend = true;
         string val = input.text;
         char[] vals = val.ToCharArray();
         int intensity = (int)mutationIntensity.value;
@@ -67,7 +72,16 @@ public class DNAInterp : MonoBehaviour
             usedVals.Append(rand);
             vals[rand] = (char)Mathf.Clamp(((int)vals[rand] + Random.Range(-1, 2)), 97, 122);
         }
-        input.text = (new string(vals)).ToLower();
+        string final = (new string(vals)).ToLower();
+        if (doPrepend)
+        {
+            final = (char)Random.Range(97, 122) + final;
+        }
+        if (doAppend)
+        {
+            final = final + (char)Random.Range(97, 122);
+        }
+        input.text = final;
     }
 
     public void interpDNA(string val)
@@ -78,15 +92,11 @@ public class DNAInterp : MonoBehaviour
         }
         val = val.ToLower();
         char[] vals = val.ToUpper().ToCharArray();
+        Creature creature;
         char id = vals[0];
-        Creature creature = new Creature();
-
-        (int, Part) info = interpPart(vals, 0);
-        Part main = info.Item2;
-        if (main.type != partType.Null)
-            creature = new Creature(0, info.Item2); //create a new creature with an initial hub part. Move pointer to 1
-        else
-            creature = new Creature(-1, info.Item2);
+        // (int, Part) info = interpPart(vals, 0);
+        // Part main = info.Item2;
+        creature = new Creature(0, interpHub(vals, 1).Item2); //create a new creature with an initial hub part. Move pointer to 1
         if (creature.id == -1)
         {
             print("Bad creature");

@@ -6,6 +6,7 @@ using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEditor.VersionControl;
 using UnityEngine;
+using System.Text;
 using UnityEngine.UI;
 
 public class DrawCreature : MonoBehaviour
@@ -18,11 +19,15 @@ public class DrawCreature : MonoBehaviour
 
     GameObject[] creatures;
 
+    public Material[] materials;
+
     public Vector2 offset;
 
     public Vector2 dimensions;
 
     public Vector2 startPos;
+
+    Creature currentCreature = new Creature();
 
     public int currentMeshInd = 0;
     void Start()
@@ -52,8 +57,8 @@ public class DrawCreature : MonoBehaviour
         // GetComponent<MeshFilter>().mesh = mesh2;
 
 
-        Creature creature = new Creature(1, new Part(partType.Hub, 5, 10, new Connection[10]{new Connection(0, new Part(partType.Limb, 5, 1,  new Connection[1] {new Connection(0, new Part(partType.Hub))})),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb)),new Connection(0, new Part(partType.Limb))}));
-        drawCreature(creature);
+        currentCreature = new Creature(1, new Part(partType.Hub, 5, 10, new Connection[10] { new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)) }));
+        sendPart();
     }
 
 
@@ -66,27 +71,17 @@ public class DrawCreature : MonoBehaviour
         GetComponent<MeshFilter>().mesh = mesh;
     }
 
-    public void sendMesh()
+    public void sendPart()
     {
-        Mesh currentMesh = gameObject.GetComponent<MeshFilter>().mesh;
-        Mesh creatureMesh = creatures[currentMeshInd].GetComponent<MeshFilter>().mesh;
-        creatureMesh.Clear();
-        creatures[currentMeshInd].GetComponent<MeshFilter>().mesh = new Mesh {
-            vertices = currentMesh.vertices,
-            uv = currentMesh.uv,
-            triangles = currentMesh.triangles};
-        currentMeshInd += 1;
-        if(currentMeshInd > creatures.Length)
-        {
-            currentMeshInd = 0;
-        }
+        Part part = currentCreature.hub;
+        GameObject fullCreature = hub(part.connections, part.size, new Vector3(0, 0));
+        // fullCreature.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
+        fullCreature.transform.position = new Vector3(0, 0, 0);
     }
 
     public void drawCreature(Creature creature)
     {
-        Part part = creature.hub;
-        GameObject fullCreature = hub(part.connections, part.size, new Vector3(0, 0));
-        GetComponent<MeshFilter>().mesh.Clear();
+        currentCreature = creature;
     }
 
     // public Mesh addPart(Part oPart)
@@ -100,22 +95,22 @@ public class DrawCreature : MonoBehaviour
     //     }
     // }
 
-    public Mesh drawHub(Part part)
-    {
-        return hub(part.connections, part.size, new Vector3(0, 0));
-    }
+    // public Mesh drawHub(Part part)
+    // {
+    //     return hub(part.connections, part.size, new Vector3(0, 0));
+    // }
     //Triangle array is constructed by taking 3 indices from the triangle array at a time and using them to create a triangle. 
     //Vertice count represents the number of vertices the outer circle should have. Have to add one to include the inner vertice, 
     //as all triangles will be constructed using that centerpoint. 
     //For a circle of N outer vertices, there will be n Triangles. IE a circle of 4 outer vertices will require 4 triangles.
     //Step determines the angle difference between each vertice for calculating actual coordinate. IE for a circle of 4 outer vertices,
     //the calculation will step 90 degrees for each point calculation
-    GameObject limb(Vector3 start, Vector3 end, Vector3 angleInf, float thiccness, Connection con)
+    GameObject limb(Vector3 start, Vector3 end, float angleInfX, float angleInfY, float thiccness, Connection con)
     {
         print("Draw limb");
         float widthMag = thiccness / 2;
-        Vector3 displacement1 = widthMag * new Vector3(-angleInf.x, angleInf.y);
-        Vector3 displacement2 = widthMag * new Vector3(angleInf.y, -angleInf.x);
+        Vector3 displacement1 = widthMag * new Vector3(-(angleInfY + 0.05f), angleInfX + 0.05f);
+        Vector3 displacement2 = widthMag * new Vector3(angleInfY + 0.05f, -(angleInfX + 0.05f));
         Vector3[] vertices = new Vector3[4] { start + displacement1, start + displacement2, end + displacement1, end + displacement2 };
         Vector2[] uv = new Vector2[4] { start + displacement1, start + displacement2, end + displacement1, end + displacement2 };
         int[] triangles = new int[6] { 0, 2, 3, 0, 1, 3 };
@@ -127,10 +122,13 @@ public class DrawCreature : MonoBehaviour
             uv = uv,
             triangles = triangles
         };
-        Rigidbody2D rb = thisObject.GetOrAddComponent<Rigidbody2D>();
-        PolygonCollider2D collider = thisObject.GetOrAddComponent<PolygonCollider2D>();
-        collider.SetPath(1, fromV3(vertices));
-        MeshFilter meshFilter = thisObject.GetOrAddComponent<MeshFilter>();
+        Rigidbody2D rb = thisObject.AddComponent<Rigidbody2D>();
+        // rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        PolygonCollider2D collider = thisObject.AddComponent<PolygonCollider2D>();
+        collider.SetPath(0, fromV3(vertices));
+        MeshFilter meshFilter = thisObject.AddComponent<MeshFilter>();
+        MeshRenderer rend = thisObject.AddComponent<MeshRenderer>();
+        rend.material = materials[0];
         meshFilter.mesh = mesh;
         // meshes.Append(mesh);
         // print((string.Join(", ", mesh.triangles.ToList())));
@@ -141,26 +139,28 @@ public class DrawCreature : MonoBehaviour
             Part oPart = con.otherPart;
             if (oPart.type == partType.Hub)
             {
-                float eposX = end.x + (oPart.size) * angleInf.x;
-                float eposY = end.y + (oPart.size) * angleInf.y;
+                float eposX = end.x + (oPart.size) * angleInfX;
+                float eposY = end.y + (oPart.size) * angleInfY;
                 oElement = hub(oPart.connections, oPart.size, new Vector3(eposX, eposY));
             }
             else if (oPart.type == partType.Limb)
             {
-                float eposX = end.x + (oPart.size) * angleInf.x;
-                float eposY = end.y + (oPart.size) * angleInf.y;
-                oElement = limb(end, new Vector3(eposX, eposY), angleInf, 0.3f, oPart.connections[0]);
-            } else
+                float eposX = end.x + (oPart.size) * angleInfX;
+                float eposY = end.y + (oPart.size) * angleInfY;
+                oElement = limb(end, new Vector3(eposX, eposY), angleInfX, angleInfY, 0.5f, oPart.connections[0]);
+            }
+            else
             {
                 print("How did we get here?");
                 oElement = new GameObject();
             }
             oElement.transform.SetParent(thisObject.transform);
-            HingeJoint2D hinge = thisObject.GetOrAddComponent<HingeJoint2D>();
+            HingeJoint2D hinge = thisObject.AddComponent<HingeJoint2D>();
             hinge.anchor = end;
-            hinge.connectedBody = oElement.GetOrAddComponent<Rigidbody2D>();
+            hinge.connectedBody = oElement.GetComponent<Rigidbody2D>();
             return thisObject;
-        } else
+        }
+        else
         {
             print("Return base mesh/No attachments");
             return thisObject;
@@ -175,7 +175,7 @@ public class DrawCreature : MonoBehaviour
         }
         return vec2;
     }
-    
+
     Mesh combineMeshes(Mesh mesh1, Mesh mesh2)
     {
         int meshStartId = mesh1.vertices.Length;
@@ -206,7 +206,12 @@ public class DrawCreature : MonoBehaviour
         uv[0] = new Vector2(0, 0);
         float step = (2 * Mathf.PI) / verticeCount;
         int triInd = 0;
-        List<Mesh> meshes = new List<Mesh>();
+        GameObject thisObject = new GameObject();
+        Rigidbody2D rb = thisObject.AddComponent<Rigidbody2D>();
+        MeshRenderer rend = thisObject.AddComponent<MeshRenderer>();
+        rend.material = materials[0];
+        // rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        PolygonCollider2D collider = thisObject.AddComponent<PolygonCollider2D>();
         for (int i = 1; i < verticeCount + 1; i++)
         { //sin(theta) = opp/hyp cos(theta) = adj/hyp. size = hyp, opp = y, adj = x,
             int stepC = i - 1;
@@ -215,35 +220,36 @@ public class DrawCreature : MonoBehaviour
             float yAngle = Mathf.Cos((stepC * step)); // height of the y
             float posX = center.x + size * xAngle; // center + (normalized height * size)
             float posY = center.y + size * yAngle;
+            vertices[i] = new Vector3(posX, posY);
+            uv[i] = new Vector2(0, 0);
             if (verticeinfo[stepC] != null)
             {
                 print("Other connected");
                 Part oPart = verticeinfo[stepC].otherPart;
-                Mesh oMesh;
+                GameObject oElement;
                 if (oPart.type == partType.Hub)
                 {
                     float eposX = center.x + (size + oPart.size) * xAngle;
                     float eposY = center.y + (size + oPart.size) * yAngle;
-                    oMesh = hub(oPart.connections, oPart.size, new Vector3(eposX, eposY));
+                    oElement = hub(oPart.connections, oPart.size, new Vector3(eposX, eposY));
                 }
                 else if (oPart.type == partType.Limb)
                 {
                     float eposX = center.x + (size + oPart.size) * xAngle;
                     float eposY = center.y + (size + oPart.size) * yAngle;
-                    oMesh = limb(new Vector3(posX, posY), new Vector3(eposX, eposY), new Vector3(xAngle, yAngle), 0.3f, oPart.connections[0]);
+                    oElement = limb(new Vector3(posX, posY), new Vector3(eposX, eposY), xAngle, yAngle, 0.5f, oPart.connections[0]);
                 }
                 else
                 {
-                    oMesh = circle(10, 0.4f, new Vector3(posX, posY));
+                    print("How did we get here?");
+                    oElement = new GameObject();
+                    oElement.AddComponent<Rigidbody2D>();
                 }
-                meshes.Add(oMesh);
+                oElement.transform.SetParent(thisObject.transform);
+                HingeJoint2D hinge = thisObject.AddComponent<HingeJoint2D>();
+                hinge.anchor = new Vector2(posX, posY);
+                hinge.connectedBody = oElement.GetComponent<Rigidbody2D>();
             }
-            vertices[i] = new Vector3(posX, posY);
-            uv[i] = new Vector2(0, 0);
-            //Triangles will be 3 times as long as vertices, so must assign 3 points in each iteration
-            // An example triangles array for a circle of 4 vertices would be |0,1,2|,|0,2,3|,|0,3,4|,|0,5,6| (| | deliniates between a triangle, purely aesthetic)
-            //for i = 1, append 0 1 and 2
-            // for i =  2, append 0 2 and 3
             triangles[triInd] = 0;
             triInd += 1;
             triangles[triInd] = i;
@@ -259,24 +265,17 @@ public class DrawCreature : MonoBehaviour
                 triInd += 1;
             }
         }
-        Mesh aMesh = new Mesh
+        print("These are the vertices: " + SerializeVector3Array(vertices));
+        Mesh mesh = new Mesh
         {
             vertices = vertices,
             uv = uv,
             triangles = triangles
         };
-        print("Creating a hub");
-        print((string.Join(", ", aMesh.triangles.ToList())));
-        print((string.Join(", ", aMesh.vertices.ToList())));
-        meshes.Add(aMesh);
-        Mesh final = new Mesh();
-        print(meshes.Count);
-        foreach (Mesh mesh1 in meshes)
-        {
-            print(mesh1.vertices);
-            final = combineMeshes(final, mesh1);
-        }
-        return final;
+        collider.SetPath(0, fromV3(vertices));
+        MeshFilter meshFilter = thisObject.AddComponent<MeshFilter>();
+        meshFilter.mesh = mesh;
+        return thisObject;
     }
     Mesh circle(int verticeCount, float size, Vector3 center)
     {
@@ -321,5 +320,14 @@ public class DrawCreature : MonoBehaviour
             uv = uv,
             triangles = triangles
         };
+    }
+    public static string SerializeVector3Array(Vector3[] aVectors)
+    {
+        string final = "";
+        foreach (Vector3 v in aVectors)
+        {
+            final += v.ToString();
+        }
+        return final;
     }
 }
