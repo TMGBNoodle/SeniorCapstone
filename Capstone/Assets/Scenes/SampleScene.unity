@@ -2303,7 +2303,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxSize: 5
   minSize: 1
-  minAnchors: 1
+  minAnchors: 4
   maxAnchors: 20
   append: {fileID: 0}
   prepend: {fileID: 0}

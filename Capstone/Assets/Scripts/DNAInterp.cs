@@ -19,6 +19,8 @@ public class DNAInterp : MonoBehaviour
 
     public Toggle append;
 
+    public int creatureid;
+
     public Toggle prepend;
     public bool wrapPointer = false;
 
@@ -56,47 +58,51 @@ public class DNAInterp : MonoBehaviour
 
     public void mutate()
     {
-        bool doPrepend = true;
-        bool doAppend = true;
         string val = input.text;
         char[] vals = val.ToCharArray();
-        int intensity = (int)mutationIntensity.value;
-        int[] usedVals = new int[intensity];
-        for (int i = 0; i < intensity; i++)
+        if(vals.Length > 0)
         {
-            int rand = Random.Range(0, vals.Length - 1);
-            while (usedVals.Contains(rand))
+            bool doPrepend = true;
+            bool doAppend = true;
+            int intensity = (int)mutationIntensity.value;
+            int[] usedVals = new int[intensity];
+            for (int i = 0; i < intensity; i++)
             {
-                rand = Random.Range(0, vals.Length - 1);
+                int rand = Random.Range(0, vals.Length - 1);
+                while (usedVals.Contains(rand))
+                {
+                    rand = Random.Range(0, vals.Length - 1);
+                }
+                usedVals.Append(rand);
+                vals[rand] = (char)Mathf.Clamp(((int)vals[rand] + Random.Range(-1, 2)), 97, 122);
             }
-            usedVals.Append(rand);
-            vals[rand] = (char)Mathf.Clamp(((int)vals[rand] + Random.Range(-1, 2)), 97, 122);
-        }
-        string final = (new string(vals)).ToLower();
-        if (doPrepend)
-        {
-            final = (char)Random.Range(97, 122) + final;
-        }
-        if (doAppend)
-        {
-            final = final + (char)Random.Range(97, 122);
-        }
-        input.text = final;
+            string final = (new string(vals)).ToLower();
+            if (doPrepend)
+            {
+                final = (char)Random.Range(97, 122) + final;
+            }
+            if (doAppend)
+            {
+                final = final + (char)Random.Range(97, 122);
+            }
+            input.text = final;
+        }   
     }
 
     public void interpDNA(string val)
     {
+        creatureid = Random.Range(1000, 10000);
         if (val.Length <= 0)
         {
+            print("Length to short");
             return;
         }
         val = val.ToLower();
         char[] vals = val.ToUpper().ToCharArray();
         Creature creature;
-        char id = vals[0];
         // (int, Part) info = interpPart(vals, 0);
         // Part main = info.Item2;
-        creature = new Creature(0, interpHub(vals, 1).Item2); //create a new creature with an initial hub part. Move pointer to 1
+        creature = new Creature(creatureid, interpHub(vals, 1).Item2, currentString); //create a new creature with an initial hub part. Move pointer to 1
         if (creature.id == -1)
         {
             print("Bad creature");
@@ -121,9 +127,10 @@ public class DNAInterp : MonoBehaviour
             switch ((int)id % 2)//)
             {
                 case 1:
-                    print("Found hub");
+                    print("Found hub: " + pointer);
                     return interpHub(vals, pointer + 1);
                 case 0:
+                    print("Found limb: " + pointer);
                     return interpLimb(vals, pointer + 1);
                 default:
                     return interpPart(vals, pointer + 1);
@@ -131,6 +138,7 @@ public class DNAInterp : MonoBehaviour
         }
         else
         {
+            print("Nullpart, pointer too large" + pointer);
             return (pointer, new Part(partType.Null));
         }
 
@@ -158,16 +166,16 @@ public class DNAInterp : MonoBehaviour
         int remaining = vals.Length - pointer;
         if (pointer > 0 && remaining >= 4)
         {
-            string seq = new string(vals[pointer..(pointer + 4)]);
-            foreach (string stopCodon in stopCodons)
-            {
-                if (seq.Contains(stopCodon))
-                {
-                    print("Found stop codon");
-                    return (pointer, new Part(partType.Null));
-                }
-            }
-            print("Valid Pointer" + pointer);
+            // string seq = new string(vals[pointer..(pointer + 4)]);
+            // foreach (string stopCodon in stopCodons)
+            // {
+            //     if (seq.Contains(stopCodon))
+            //     {
+            //         print("Found stop codon");
+            //         return (pointer, new Part(partType.Null));
+            //     }
+            // }
+            print("Valid Pointer: " + pointer + " with remaining: " + remaining);
             (int, int) sizeRaw = interpNum(vals[pointer..(pointer + 1)]);
             float sizeActual = minSize + (maxSize * ((float)sizeRaw.Item1 / (float)sizeRaw.Item2));
             pointer = incrPointer(pointer, 2, vals.Length);
@@ -176,38 +184,38 @@ public class DNAInterp : MonoBehaviour
                 print("Exit halfway");
                 return (-1, new Part(partType.Null));
             }
-            print("Interpreting anchors");
             (int, int) anchorsRaw = interpNum(vals[pointer..(pointer + 1)]);
             int anchorsActual = minAnchors + (int)(maxAnchors * ((float)anchorsRaw.Item1 / (float)anchorsRaw.Item2));
             pointer = incrPointer(pointer, 2, vals.Length);
+            print("Actual anchors: " + anchorsActual);
             if (pointer == -1 || vals.Length - pointer <= 1)
             {
-                print("Exit with base part");
+                print("Exit with base hub");
                 return (-1, new Part(partType.Hub, sizeActual, anchorsActual));
             }
             (int, int) anchorsUtRaw = interpNum(vals[pointer..(pointer + 1)]);
-            print("Actual anchors: " + anchorsActual);
+            print("Anchors ut info: " + anchorsUtRaw);
             int usedActual = (int)(anchorsActual * ((float)anchorsUtRaw.Item1 / (float)anchorsUtRaw.Item2));
             print("Anchors used: " + usedActual);
             pointer = incrPointer(pointer, 2, vals.Length);
             if (pointer == -1 || vals.Length - pointer <= 1)
             {
-                print("Exit halfway");
+                print("Exit halfway" + creatureid);
                 return (-1, new Part(partType.Hub, sizeActual, anchorsActual));
             }
             //float sizeActual = 1;
             Part final = new Part(partType.Hub, sizeActual, anchorsActual);
             Dictionary<char[], int> lookup = new Dictionary<char[], int>();
             print(pointer);
-            print("using " + usedActual + " spaces");
+            print("using " + usedActual + " spaces : " + creatureid);
             if (pointer == -1 || vals.Length - pointer <= 1)
             {
-                print("Exit halfway");
+                print("Exit halfway" + creatureid);
                 return (-1, final);
             }
             for (int i = 0; i < usedActual; i++)
             {
-                print("Adding Connection");
+                // print("Adding Connection");
                 remaining = vals.Length - pointer;
                 if (remaining > 1 && pointer > -1)
                 {
@@ -226,19 +234,23 @@ public class DNAInterp : MonoBehaviour
                         pointer = incrPointer(pointer, 2, vals.Length);
                         (int, Part) newVal = interpPart(vals, pointer);
                         Part otherPart = newVal.Item2;
-                        pointer = newVal.Item1;
+                        print("OPart type: " + otherPart.type);
+                        // pointer = newVal.Item1;
                         final.connections[idAct] = new Connection(idAct, otherPart);
                     }
+                } else
+                {
+                    print("Invalid pointer or not enough vals left : " + creatureid);
+                    print("Pointer is " + pointer);
+                    print("Remaining" + remaining);
                 }
             }
-            print("Part ended");
-            print(pointer);
+            print("Part ended, Pointer: " + pointer + " : " + creatureid);
             return (pointer, final);
         }
         else
         {
-            print("nullPart " + pointer);
-            print("ASDASDKLASDFKASKDLFASKDFLASKDFLKASDFLKSADFLKa");
+            print("nullPart, pointer : " + pointer + " : " + creatureid);
 
 
 
@@ -248,16 +260,37 @@ public class DNAInterp : MonoBehaviour
 
     public (int, Part) interpLimb(char[] vals, int pointer)
     {
-        print("Do limb");
-        return (pointer, new Part(partType.Limb));
+        print("building limb");
+        int remaining = vals.Length - pointer;
+        if (pointer > 0 && remaining >= 2)
+        {
+        (int, int) sizeRaw = interpNum(vals[pointer..(pointer + 1)]);
+        float sizeActual = minSize + (maxSize * ((float)sizeRaw.Item1 / (float)sizeRaw.Item2));
+        print("Limbsize" + sizeActual);
+        pointer = incrPointer(pointer, 2, vals.Length);
+        //minimum data reached to create a limb
+        Part part = new Part(partType.Limb, sizeActual, 1);
+        if (pointer == -1 || vals.Length - pointer <= 1)
+        {
+            print("limb with no cons");
+            return (pointer, part);
+        } else
+        {
+            print("Limb with conns");
+            (int,Part) info = interpPart(vals, pointer);
+            // pointer = info.Item1;
+            part.connections[0] = new Connection(0, info.Item2);
+        }
+        return (pointer, part);
+        } else
+        {
+            print("NP: " + pointer + remaining);
+            return (pointer, new Part(partType.Null));
+        }
     }
 
     public int incrPointer(int pointer, int add, int max) //basic function increments pointer with wrapparound if current value is above a threshhold
     {
-        print("P: " + pointer);
-        print("A: " + add);
-        print("M: " + max);
-
         if (pointer == -1)
         {
             print("Return invalid");
@@ -279,18 +312,16 @@ public class DNAInterp : MonoBehaviour
     //recieve two alphabetical numbers and convert them into a number
     public (int, int) interpNum(char[] nums)
     {
-        print("Interpreting number");
         int[] digits = nums.Select((c) => char.ToLower(c) - 'a').ToArray<int>();//index == 0
         int final = digits.Last();
         int max = 25;
         int decPlace = 1;
-        for (int i = digits.Length - 2; i > -1; i--)
+        for (int i = digits.Length - 1; i > -1; i--)
         {
             final = final + digits[i] * (int)Mathf.Pow(26, decPlace); //BA = 26. B = 1. A = 0.
             max += 25 * (int)Mathf.Pow(26, decPlace);
             decPlace += 1;
         }
-        print("Successful interp");
         return (final, max);
     }
     // Update is called once per frame

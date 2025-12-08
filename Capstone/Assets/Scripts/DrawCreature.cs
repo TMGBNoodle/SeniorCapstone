@@ -30,6 +30,8 @@ public class DrawCreature : MonoBehaviour
     Creature currentCreature = new Creature();
 
     public int currentMeshInd = 0;
+
+    public int id;
     void Start()
     {
         // // Create a new Mesh and set its data properties (vertices, UV coordinates, and triangles).
@@ -57,7 +59,7 @@ public class DrawCreature : MonoBehaviour
         // GetComponent<MeshFilter>().mesh = mesh2;
 
 
-        currentCreature = new Creature(1, new Part(partType.Hub, 5, 10, new Connection[10] { new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)) }));
+        currentCreature = new Creature(1, new Part(partType.Hub, 5, 10, new Connection[10] { new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)) }), "");
         sendPart();
     }
 
@@ -75,8 +77,9 @@ public class DrawCreature : MonoBehaviour
     {
         Part part = currentCreature.hub;
         GameObject fullCreature = hub(part.connections, part.size, new Vector3(0, 0));
-        // fullCreature.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
+        fullCreature.AddComponent<CreatureControl>();
         fullCreature.transform.position = new Vector3(0, 0, 0);
+        // fullCreature.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
     }
 
     public void drawCreature(Creature creature)
@@ -116,6 +119,7 @@ public class DrawCreature : MonoBehaviour
         int[] triangles = new int[6] { 0, 2, 3, 0, 1, 3 };
         List<Mesh> meshes = new List<Mesh>();
         GameObject thisObject = new GameObject();
+        thisObject.tag = "Limb";
         Mesh mesh = new Mesh
         {
             vertices = vertices,
@@ -153,6 +157,7 @@ public class DrawCreature : MonoBehaviour
             {
                 print("How did we get here?");
                 oElement = new GameObject();
+                thisObject.tag = "Null";
             }
             oElement.transform.SetParent(thisObject.transform);
             HingeJoint2D hinge = thisObject.AddComponent<HingeJoint2D>();
@@ -207,6 +212,7 @@ public class DrawCreature : MonoBehaviour
         float step = (2 * Mathf.PI) / verticeCount;
         int triInd = 0;
         GameObject thisObject = new GameObject();
+        thisObject.tag = "Hub";
         Rigidbody2D rb = thisObject.AddComponent<Rigidbody2D>();
         MeshRenderer rend = thisObject.AddComponent<MeshRenderer>();
         rend.material = materials[0];
@@ -215,14 +221,13 @@ public class DrawCreature : MonoBehaviour
         for (int i = 1; i < verticeCount + 1; i++)
         { //sin(theta) = opp/hyp cos(theta) = adj/hyp. size = hyp, opp = y, adj = x,
             int stepC = i - 1;
-            print("La de da");
             float xAngle = Mathf.Sin((stepC * step)); // this is not angle this is the normalized height of the x
             float yAngle = Mathf.Cos((stepC * step)); // height of the y
             float posX = center.x + size * xAngle; // center + (normalized height * size)
             float posY = center.y + size * yAngle;
             vertices[i] = new Vector3(posX, posY);
             uv[i] = new Vector2(0, 0);
-            if (verticeinfo[stepC] != null)
+            if (verticeinfo[stepC] != null && verticeinfo[stepC].otherPart.type != partType.Null)
             {
                 print("Other connected");
                 Part oPart = verticeinfo[stepC].otherPart;
@@ -244,6 +249,7 @@ public class DrawCreature : MonoBehaviour
                     print("How did we get here?");
                     oElement = new GameObject();
                     oElement.AddComponent<Rigidbody2D>();
+                    thisObject.tag = "Null";
                 }
                 oElement.transform.SetParent(thisObject.transform);
                 HingeJoint2D hinge = thisObject.AddComponent<HingeJoint2D>();

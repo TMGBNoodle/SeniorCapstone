@@ -11,15 +11,19 @@ public class Creature
     public int id;
     public Part hub;
 
-    public Creature(int id, Part part)
+    public string seed;
+
+    public Creature(int id, Part part, string seed)
     {
         this.id = id;
         this.hub = part;
+        this.seed = seed;
     }
     public Creature()
     {
         this.id = -1;
         this.hub = new Part(partType.Null);
+        this.seed = "";
     }
     public override string ToString()
     {
@@ -61,6 +65,7 @@ public class Part
     }
     public Part(partType type, float size, int anchors)
     {
+        this.type = type;
         switch (type)
         {
             case partType.Hub:
@@ -76,13 +81,14 @@ public class Part
     }
     public Part(partType type, float size, int anchors, Connection[] connections)
     {
+        this.type = type;
         switch (type)
         {
             case partType.Hub:
                 this.connections = connections;
                 this.size = size;
                 break;
-            case partType.Limb:
+            case partType.Limb: 
                 this.connections = connections;
                 this.size = size;
                 break;
