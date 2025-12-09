@@ -78,8 +78,7 @@ public class DrawCreature : MonoBehaviour
         Part part = currentCreature.hub;
         GameObject fullCreature = hub(part.connections, part.size, new Vector3(0, 0));
         fullCreature.AddComponent<CreatureControl>();
-        fullCreature.transform.position = new Vector3(0, 0, 0);
-        // fullCreature.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
+        fullCreature.transform.position = new Vector3(-100, 0, 0);
     }
 
     public void drawCreature(Creature creature)

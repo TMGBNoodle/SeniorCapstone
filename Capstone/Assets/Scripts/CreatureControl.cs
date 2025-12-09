@@ -6,6 +6,9 @@ public class CreatureControl : MonoBehaviour
 {
     public hingeInfo[] hinges;
 
+    public bool Active = false;
+
+    public Vector3 startPos = new Vector3(-100, 0, 0);
     Dictionary<string, partType> convInfo = new Dictionary<string, partType>
     {
         {"Hub", partType.Hub},
@@ -65,7 +68,10 @@ public class CreatureControl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        train();
     }
+
+
 
     void moveCycle()
     {
@@ -79,6 +85,17 @@ public class CreatureControl : MonoBehaviour
     void moveCGN()
     {
         double[,] moveInfo = GCNT.instance.getFeatures(hinges);
+    }
+    public void train()
+    {
+        if(GCNT.instance.episodeComp == true)
+        {
+            Time.timeScale = 100;
+            gameObject.transform.position = startPos;
+        } else
+        {
+            GCNT.instance.Train(hinges, gameObject, 0);
+        }
     }
     public partType parsePart(string name)
     {
