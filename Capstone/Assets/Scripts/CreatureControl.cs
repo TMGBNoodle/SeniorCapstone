@@ -75,6 +75,11 @@ public class CreatureControl : MonoBehaviour
             hinge.motor = new JointMotor2D {motorSpeed = 100, maxMotorTorque = 500000};
         }
     }
+    
+    void moveCGN()
+    {
+        double[,] moveInfo = GCNT.instance.getFeatures(hinges);
+    }
     public partType parsePart(string name)
     {
         return convInfo[name];
@@ -90,6 +95,9 @@ public class hingeInfo
         public hingeInfo[] descendants; //ref to all it's direct descendants
         
         public int parent;
+
+        public float size;
+
 
         public int type;
         public hingeInfo(int idInf, HingeJoint2D hingein, int heightinf, int ancest, hingeInfo[] desc, int attachedType)

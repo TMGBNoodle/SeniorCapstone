@@ -4,13 +4,15 @@ using System.Linq;
 using System.Text;
 using Unity.Mathematics;
 using UnityEngine;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 public class GCNT : MonoBehaviour
 {
 
     public static GCNT  instance{get; set;}
 
-    int featureCount = 15;
+    int featureCount = 8;
     // Joint type, 2 options so takes 2 spaces
     // Features:
     // Size
@@ -20,12 +22,12 @@ public class GCNT : MonoBehaviour
     // CurrentSpeed
     // CurrentTorque
 
-    Dictionary<int, float[,]> graphInfo;
+    Dictionary<int, double[,]> graphInfo;
     // int[,] adj;
     // int[,] identity;
-
-    float[,] w1;
-    float[,] w2;
+    int hidden = 32;
+    double[,] w1; // featurecount, hidden
+    double[,] w2; //hidden, featurecount
     // int[,] deg;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Awake ()
@@ -43,9 +45,35 @@ public class GCNT : MonoBehaviour
 
     public void init()
     {
-        w1 = new float[3,3];
-        w2 = new float[3,3];
-        graphInfo = new Dictionary<int, float[,]>();
+        w1 = new double[featureCount,hidden];
+        w2 = new double[hidden,featureCount];
+        graphInfo = new Dictionary<int, double[,]>();
+    }
+
+    public double[,] eval(hingeInfo[] inf, int id)
+    {
+        double[,] features = getFeatures(inf);
+
+        double[,] v1 = layer(features, id, 1);
+        double[,] v2 = layer(v1, id, 2);
+        return v2;
+    }
+
+    public double[,] getFeatures(hingeInfo[] info)
+    {
+        double[,] final = new double[info.Length, featureCount];
+        foreach(hingeInfo data in info)
+        {
+            HingeJoint2D hinge = data.hinge;
+            final[data.id, data.type] = 1; //2 (0 indexed this is counting how many I have)
+            final[data.id, 3] = data.size; // 3
+            final[data.id, 4] = data.height; // 4
+            final[data.id, 5] = data.ancestry; // 5
+            final[data.id, 6] = hinge.jointAngle;// 6
+            final[data.id, 7] = hinge.motor.motorSpeed; // 7
+            final[data.id, 8] = hinge.GetMotorTorque(Time.time); //8
+        }
+        return final;
     }
     public void initCreature(hingeInfo[] info, int id)
     {
@@ -54,20 +82,19 @@ public class GCNT : MonoBehaviour
         int[,] identity = new int[n,n];
         int[] deg = new int[n];
         int[,] at = new int[n,n];
-        float[] degCalc = new float[n];
-        float[,] aHat = new float[n,n];
+        double[] degCalc = new double[n];
+        double[,] aHat = new double[n,n];
         int connCount = 0;
 
         for (int i = 0; i < info.Length; i++)
         {   
             hingeInfo current = info[i];
-            current.
             int crrID = current.id;
             print(crrID);
             identity[crrID,crrID] = 1;
             at[crrID, crrID] = 1;
             hingeInfo[] descs = current.descendants;
-            deg[crrID] = 1;
+            deg[crrID] += 1;
             for (int j = 0; j < descs.Length; j++)
             {
                 connCount += 1;
@@ -104,6 +131,26 @@ public class GCNT : MonoBehaviour
         
     }
 
+    public void Train(int Time)
+    {
+        
+    }
+
+    double[,] layer(double[,] features, int creatureID, int layer)
+    {
+        Matrix<double> aHat = DenseMatrix.OfArray(graphInfo[creatureID]);
+        Matrix<double> fMatrix = DenseMatrix.OfArray(features);
+        double[,] w;
+        if(layer == 1)
+                w = w1;
+        else
+                w = w2;
+        Matrix<double> wMatrix = DenseMatrix.OfArray(w);
+        Matrix<double> interior = aHat * (fMatrix * wMatrix);
+        
+        interior = interior.Map(x => Math.Max(0,x)); // activation function - ReLU
+        return interior.ToArray();
+    }
     public void SaveWeights()
     {
         string savew1 = MatrixToString(w1);
@@ -114,8 +161,8 @@ public class GCNT : MonoBehaviour
 
     public void LoadWeights()
     {
-        w1 = StringToFloatMatrix(System.IO.File.ReadAllText(Application.persistentDataPath + "/w1.txt"));
-        w2 = StringToFloatMatrix(System.IO.File.ReadAllText(Application.persistentDataPath + "/w2.txt"));
+        w1 = StringTodoubleMatrix(System.IO.File.ReadAllText(Application.persistentDataPath + "/w1.txt"));
+        w2 = StringTodoubleMatrix(System.IO.File.ReadAllText(Application.persistentDataPath + "/w2.txt"));
     }
     public int[,] AddIntMatrix(int[,] matrix1, int[,] matrix2) //Does not check whether the matrixes are the same size
     {
@@ -131,6 +178,8 @@ public class GCNT : MonoBehaviour
         }
         return final;
     }
+
+    // public double[,] MultdoubleMatrix(double[,])
     public static void PrintMatrix<T>(T[,] matrix) //generated using OpenAI ChatGPT
     {
         int rows = matrix.GetLength(0);
@@ -172,14 +221,14 @@ public class GCNT : MonoBehaviour
 
         return matrix;
     }
-    public static float[,] StringToFloatMatrix(string data)
+    public static double[,] StringTodoubleMatrix(string data)
     {
         string[] lines = data.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
         int rows = int.Parse(lines[0]);
         int cols = int.Parse(lines[1]);
 
-        float[,] matrix = new float[rows, cols];
+        double[,] matrix = new double[rows, cols];
 
         for (int r = 0; r < rows; r++)
         {
@@ -187,7 +236,7 @@ public class GCNT : MonoBehaviour
 
             for (int c = 0; c < cols; c++)
             {
-                matrix[r, c] = float.Parse(values[c]);
+                matrix[r, c] = double.Parse(values[c]);
             }
         }
 
