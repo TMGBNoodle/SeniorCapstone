@@ -13,9 +13,9 @@ public class GCNT : MonoBehaviour
 
     public static GCNT  instance{get; set;}
     float maxMotorSpeed = 100;
-    int featureCount = 8;
+    int featureCount = 9;
 
-    float episodeTime = 20;
+    float episodeTime = 10;
     double sigma0 = 0.3;
     double decayRate = 0.9995;
     int globalStep = 0;
@@ -43,7 +43,7 @@ public class GCNT : MonoBehaviour
     bool training;
     double lastPosX;
 
-    public bool episodeComp = true;
+    public bool episodeComp = false;
     Trajectory trainingInfo;
     // int[,] deg;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -67,13 +67,11 @@ public class GCNT : MonoBehaviour
             instance = this;
             DontDestroyOnLoad(gameObject);
         }
+        init();
     }
 
     public void init()
     { 
-
-        w1 = new double[featureCount,hidden];
-        w2 = new double[hidden,featureCount];
         graphInfo = new Dictionary<int, double[,]>();
     }
 
@@ -86,9 +84,11 @@ public class GCNT : MonoBehaviour
         return v2;
     }
 
-    public double[,] getFeatures(hingeInfo[] info)
+    public double[,] getFeatures(hingeInfo[] info) 
     {
         double[,] final = new double[info.Length, featureCount];
+        
+
         foreach(hingeInfo data in info)
         {
             HingeJoint2D hinge = data.hinge;
@@ -167,11 +167,47 @@ public class GCNT : MonoBehaviour
         {
             UpdateWeights(trainingInfo, id, 1e-4, 0.99);
             episodeComp = true;
+            SaveWeights();
         }
     }
 
-    public void initTraining(Vector3 newStartPos)
+    public void InitWeights() //chatgpt generation
     {
+            double XavierScale(int fanIn, int fanOut)
+        {
+            return Math.Sqrt(2.0 / (fanIn + fanOut));
+        }
+
+        // --- Gaussian sampler ---
+        double NextGaussian()
+        {
+            double u1 = 1.0 - Random.value;
+            double u2 = 1.0 - Random.value;
+            return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2);
+        }
+
+        // -------- Initialize W1: (featureCount × hidden) --------
+        w1 = new double[featureCount, hidden];
+        double scale1 = XavierScale(featureCount, hidden);
+
+        for (int i = 0; i < featureCount; i++)
+            for (int j = 0; j < hidden; j++)
+                w1[i, j] = NextGaussian() * scale1;
+
+        // -------- Initialize W2: (hidden × featureCount) --------
+        w2 = new double[hidden, 1];
+        double scale2 = XavierScale(hidden, 1);
+
+        for (int i = 0; i < hidden; i++)
+            for (int j = 0; j < 1; j++)
+                w2[i, j] = NextGaussian() * scale2;
+        SaveWeights();
+    }
+    public void initTraining(Vector3 newStartPos, hingeInfo[] inf, int id)
+    {
+        print("Initialized values");
+        LoadWeights();
+        initCreature(inf, id);
         startPos = newStartPos;
         trainingInfo = new();
         startTime = Time.time;
@@ -223,7 +259,7 @@ public class GCNT : MonoBehaviour
 
         for (int i = 0; i < final.Length; i++)
         {
-            final[i] = v2[i, 7]; //the only thing the algorithm will be changing is the motorspeed. So this is the only relevant value
+            final[i] = v2[i, 0]; //the only thing the algorithm will be changing is the motorspeed. So this is the only relevant value
         }
         return final;
     }
@@ -310,7 +346,7 @@ public class GCNT : MonoBehaviour
 
             for (int i = 0; i < n; i++)
             {
-                double mu = H2[i, 7];
+                double mu = H2[i, 0];
                 double a = actions[i];
                 double dLogP_dMu = (a - mu) / (sig * sig);
 
@@ -366,7 +402,7 @@ public class GCNT : MonoBehaviour
     public void SaveWeights()
     {
         string savew1 = MatrixToString(w1);
-        string savew2 = MatrixToString(w1);
+        string savew2 = MatrixToString(w2);
         System.IO.File.WriteAllText(Application.persistentDataPath + "/w2.txt", savew2);
         System.IO.File.WriteAllText(Application.persistentDataPath + "/w1.txt", savew1);
     }

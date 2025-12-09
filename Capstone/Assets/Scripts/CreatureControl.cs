@@ -8,6 +8,11 @@ public class CreatureControl : MonoBehaviour
 
     public bool Active = false;
 
+    public bool training = false;
+
+    public bool tr2 = false;
+
+    public bool saved = false;
     public Vector3 startPos = new Vector3(-100, 0, 0);
     Dictionary<string, partType> convInfo = new Dictionary<string, partType>
     {
@@ -17,13 +22,6 @@ public class CreatureControl : MonoBehaviour
     };
     int hingeCount = 0;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        hinges = getHingeInfo(gameObject, 0, -1);
-        
-        GCNT.instance.initCreature(hinges, 1);
-        moveCycle();
-    }
 
     // void initHinges()
     // {
@@ -68,10 +66,29 @@ public class CreatureControl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        train();
+        if(Active)
+        {
+            if(training)
+                train();
+        }
     }
 
+    public void stopTraining()
+    {
+        training = false;
+    }
+    public void startTraining()
+    {
+        training = true;
+    }
 
+    public void Start()
+    {
+        hinges = getHingeInfo(gameObject, 0, -1);
+        Active = true;
+        training = true;
+        tr2 = true;
+    }
 
     void moveCycle()
     {
@@ -88,13 +105,24 @@ public class CreatureControl : MonoBehaviour
     }
     public void train()
     {
-        if(GCNT.instance.episodeComp == true)
+        if(GCNT.instance.episodeComp == true && tr2)
         {
-            Time.timeScale = 100;
+            print("One episode done");
             gameObject.transform.position = startPos;
-        } else
+            if(training)
+            {
+                GCNT.instance.episodeComp = false;
+                GCNT.instance.initTraining(new Vector3(100,0,0), hinges, 0);
+            }
+        } else if(tr2)
         {
+            saved = false;
             GCNT.instance.Train(hinges, gameObject, 0);
+        } else if(!saved)
+        {
+            print("Saved info");
+            saved = true;
+            GCNT.instance.SaveWeights();
         }
     }
     public partType parsePart(string name)

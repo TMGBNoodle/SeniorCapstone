@@ -59,8 +59,8 @@ public class DrawCreature : MonoBehaviour
         // GetComponent<MeshFilter>().mesh = mesh2;
 
 
-        currentCreature = new Creature(1, new Part(partType.Hub, 5, 10, new Connection[10] { new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)) }), "");
-        sendPart();
+        // currentCreature = new Creature(1, new Part(partType.Hub, 5, 10, new Connection[10] { new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)), new Connection(0, new Part(partType.Limb)) }), "");
+        // sendPart();
     }
 
 
@@ -73,12 +73,14 @@ public class DrawCreature : MonoBehaviour
         GetComponent<MeshFilter>().mesh = mesh;
     }
 
-    public void sendPart()
+    public GameObject sendPart()
     {
         Part part = currentCreature.hub;
         GameObject fullCreature = hub(part.connections, part.size, new Vector3(0, 0));
         fullCreature.AddComponent<CreatureControl>();
-        fullCreature.transform.position = new Vector3(-100, 0, 0);
+        fullCreature.transform.position = new Vector3(0, 0, 0);
+        fullCreature.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeRotation;
+        return fullCreature;
     }
 
     public void drawCreature(Creature creature)
